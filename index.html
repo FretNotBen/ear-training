@@ -65,26 +65,28 @@ for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
 pianoBuffers[midi]=await ctx.decodeAudioData(bytes.buffer);
 }));return pianoLoading;
 }
-// Build a seamless-ish sustain region for the longer chord notes.
-// Blend the final 45 ms of each loop into the beginning of the loop,
-// keeping the original transient untouched and preserving non-chord samples.
+// Sustain loops: overlap-add the end of the sample with the start of the
+// sustain region.  The loop jumps to start+crossfade (not start), so the
+// two sides meet at the same audio sample and avoid a discontinuity.
 const smoothLoopBuffers={};
 function smoothChordLoop(pitch){
 if(smoothLoopBuffers[pitch])return smoothLoopBuffers[pitch];
 const original=pianoBuffers[pitch],rate=original.sampleRate;
-const start=Math.round(.65*rate),end=Math.min(Math.round(2.65*rate),original.length-Math.round(.12*rate));
-const fade=Math.min(Math.round(.045*rate),Math.floor((end-start)/4));
+const start=Math.round(.65*rate);
+const end=Math.min(Math.round(2.65*rate),original.length-Math.round(.12*rate));
+const fade=Math.min(Math.round(.10*rate),Math.floor((end-start)/6));
 const buffer=ctx.createBuffer(original.numberOfChannels,original.length,rate);
 for(let channel=0;channel<original.numberOfChannels;channel++){
 const input=original.getChannelData(channel),output=buffer.getChannelData(channel);
 output.set(input);
 for(let i=0;i<fade;i++){
-const alpha=(i+1)/fade;
-// Match the samples at the wrap point rather than hard-switching waveform phase.
-output[end-fade+i]=input[end-fade+i]*(1-alpha)+input[start-fade+i]*alpha;
+const x=(i+.5)/fade;
+// The loop ends on the same waveform phase at which it restarts.
+const w=.5-.5*Math.cos(Math.PI*x);
+output[end-fade+i]=input[end-fade+i]*(1-w)+input[start+i]*w;
 }
 }
-return smoothLoopBuffers[pitch]={buffer,start:start/rate,end:end/rate};
+return smoothLoopBuffers[pitch]={buffer,start:(start+fade)/rate,end:end/rate};
 }
 function piano(midi,time,length,volume,bus){
 const pitches=Object.keys(pianoBuffers).map(Number);
@@ -97,7 +99,7 @@ source.loopStart=loop.start;source.loopEnd=loop.end;
 }else source.buffer=pianoBuffers[sourcePitch];
 source.playbackRate.value=Math.pow(2,(midi-sourcePitch)/12);
 const gain=ctx.createGain();gain.gain.setValueAtTime(.0001,time);
-gain.gain.linearRampToValueAtTime(volume,time+.008);
+gain.gain.linearRampToValueAtTime(volume,time+.012);
 gain.gain.setValueAtTime(volume*.88,time+.14);
 gain.gain.exponentialRampToValueAtTime(.0001,time+length);
 source.connect(gain);gain.connect(bus);source.start(time);source.stop(time+length+.06);
