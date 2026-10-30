@@ -172,10 +172,22 @@ notes.forEach((n,i)=>piano(n,t+i*step,2.5,.21,bus));
 }
 }catch(e){if(kind==='normal')$('play').textContent='↻ Replay';$('feedback').textContent='Audio issue: '+e.message+' — tap Replay to try again'}
 }
+function enablePlaybackAudioSession(){
+  // Safari iOS 17+ supports routing Web Audio as media playback instead
+  // of the default ambient session, so it can sound with Silent Mode on.
+  try {
+    if(navigator.audioSession && navigator.audioSession.type !== 'playback'){
+      navigator.audioSession.type='playback';
+    }
+  } catch(e) { console.warn('Playback audio session unavailable',e); }
+}
+
 document.addEventListener('pointerdown',()=>{
+ enablePlaybackAudioSession();
  try{if(ctx&&ctx.state!=='running')ctx.resume().catch(()=>{});}catch(e){}
 },{passive:true});
 function start(){
+enablePlaybackAudioSession();
 try{const AC=window.AudioContext||window.webkitAudioContext;
 if(AC){ctx=ctx||new AC();if(ctx.state!=='running')ctx.resume().catch(()=>{});}}
 catch(e){}
