@@ -291,7 +291,7 @@ scaleEntries.push({group:'Other',name:'Chromatic',steps:Array.from({length:13},(
 const defaults=['Major (Ionian)','Natural Minor (Aeolian)'];
 let saved={};try{saved=JSON.parse(localStorage.getItem('earMDsettings')||'{}')}catch{}
 let selected=new Set((saved.scales||defaults).filter(n=>scaleEntries.some(x=>x.name===n)));
-const noteNames=['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
+const noteNames=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
 const nm=n=>noteNames[((n%12)+12)%12]+(Math.floor(n/12)-1);
 
 let melody=[],tonic=60,answer=[],submitted=false,replays=0,question=0,perfect=0,graded=0,notesCorrect=0,notesTotal=0,startTime=0,limit=0,timer=null,finished=false,playCounter=0;
